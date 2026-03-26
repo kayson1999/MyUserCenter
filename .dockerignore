@@ -1,0 +1,35 @@
+# 编译产物
+myusercenter
+*.exe
+
+# 数据文件
+data/
+
+# 环境变量
+.env
+
+# 日志和 PID
+*.log
+*.pid
+
+# Git
+.git
+.gitignore
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Docker 自身
+.dockerignore
+Dockerfile
+docker-compose.yml
+
+# 文档
+README.md
+*.md
+
+# 启动脚本（容器内不需要）
+start.sh

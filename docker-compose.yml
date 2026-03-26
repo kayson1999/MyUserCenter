@@ -1,0 +1,56 @@
+# ============================================
+# MyUserCenter Docker Compose 部署配置
+# ============================================
+# 使用方式：
+#   SQLite 模式：docker compose up -d usercenter
+#   MySQL 模式： docker compose --profile mysql up -d
+# ============================================
+
+services:
+  # ── 用户中心服务 ──
+  usercenter:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: myusercenter
+    restart: unless-stopped
+    ports:
+      - "${PORT:-4000}:4000"
+    env_file:
+      - .env
+    volumes:
+      # SQLite 数据持久化（DB_TYPE=sqlite 时生效）
+      - /app/data/usercenter/sqlite:/app/data
+    depends_on:
+      mysql:
+        condition: service_healthy
+        required: false
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4000/health"]
+      interval: 30s
+      timeout: 5s
+      start_period: 10s
+      retries: 3
+
+  # ── MySQL 数据库（可选，DB_TYPE=mysql 时启用） ──
+  mysql:
+    image: mysql:8.0
+    container_name: myusercenter-mysql
+    restart: unless-stopped
+    profiles:
+      - mysql
+    ports:
+      - "${DB_PORT:-3306}:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:-root}
+      MYSQL_DATABASE: ${DB_NAME:-usercenter}
+      MYSQL_CHARSET: utf8mb4
+      MYSQL_COLLATION: utf8mb4_unicode_ci
+    volumes:
+      - /app/data/usercenter/mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${DB_PASSWORD:-root}"]
+      interval: 10s
+      timeout: 5s
+      start_period: 30s
+      retries: 5
