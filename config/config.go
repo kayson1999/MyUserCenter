@@ -24,6 +24,12 @@ type Config struct {
 	DBPassword string
 	DBName     string
 	DBPath     string // SQLite 文件路径
+
+	// 日志
+	LogToFile     bool   // 是否输出到文件（false 则仅控制台）
+	LogDir        string // 日志目录路径
+	LogFilePrefix string // 日志文件名前缀
+	LogMaxDays    int    // 日志保留天数（0 表示不限制）
 }
 
 var C Config
@@ -46,6 +52,11 @@ func Load() {
 		DBPassword: getEnv("DB_PASSWORD", "root"),
 		DBName:     getEnv("DB_NAME", "usercenter"),
 		DBPath:     getEnv("DB_PATH", "./data/usercenter.db"),
+
+		LogToFile:     getEnvBool("LOG_TO_FILE", true),
+		LogDir:        getEnv("LOG_DIR", "./logs"),
+		LogFilePrefix: getEnv("LOG_FILE_PREFIX", "usercenter"),
+		LogMaxDays:    getEnvInt("LOG_MAX_DAYS", 30),
 	}
 }
 
@@ -62,6 +73,18 @@ func (c *Config) IsSQLite() bool {
 func getEnv(key, defaultVal string) string {
 	if val := os.Getenv(key); val != "" {
 		return val
+	}
+	return defaultVal
+}
+
+func getEnvBool(key string, defaultVal bool) bool {
+	if val := os.Getenv(key); val != "" {
+		switch strings.ToLower(val) {
+		case "true", "1", "yes", "on":
+			return true
+		case "false", "0", "no", "off":
+			return false
+		}
 	}
 	return defaultVal
 }

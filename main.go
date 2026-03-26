@@ -8,6 +8,7 @@ import (
 	"github.com/kayson1999/MyUserCenter/config"
 	"github.com/kayson1999/MyUserCenter/database"
 	"github.com/kayson1999/MyUserCenter/handler"
+	"github.com/kayson1999/MyUserCenter/logger"
 	"github.com/kayson1999/MyUserCenter/middleware"
 
 	"github.com/gin-gonic/gin"
@@ -16,6 +17,10 @@ import (
 func main() {
 	// 加载配置
 	config.Load()
+
+	// 初始化日志系统
+	logger.Init()
+	defer logger.Close()
 
 	// 初始化数据库
 	database.Init()
@@ -87,10 +92,10 @@ func main() {
 
 	// ── 启动服务 ──
 	addr := fmt.Sprintf(":%d", config.C.Port)
-	fmt.Printf("\n🚀 MyUserCenter 用户中心已启动\n")
-	fmt.Printf("   地址: http://localhost:%d\n", config.C.Port)
-	fmt.Printf("   健康检查: http://localhost:%d/health\n", config.C.Port)
-	fmt.Printf("   接口前缀: /auth, /user, /tenant\n\n")
+	log.Printf("🚀 MyUserCenter 用户中心已启动")
+	log.Printf("   地址: http://localhost:%d", config.C.Port)
+	log.Printf("   健康检查: http://localhost:%d/health", config.C.Port)
+	log.Printf("   接口前缀: /auth, /user, /tenant")
 
 	if err := r.Run(addr); err != nil {
 		log.Fatalf("❌ 服务启动失败: %v", err)

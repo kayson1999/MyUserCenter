@@ -1,0 +1,282 @@
+### ============================================
+### MyUserCenter 用户中心 - API 测试文件
+### 使用方式：安装 VS Code 插件 "REST Client"，点击请求上方的 "Send Request" 即可执行
+### ============================================
+
+### ── 全局变量 ──
+@baseUrl = http://localhost:4000
+@contentType = application/json
+
+# 租户信息（注册租户后替换为实际值）
+@appId = myhomepage
+@appSecret = your_app_secret_here
+
+# 内部通信密钥（与 .env 中 INTERNAL_SECRET 保持一致）
+@internalSecret = internal_shared_secret_mamba_2026
+
+# 认证 Token（登录后替换为实际值）
+@token = your_jwt_token_here
+
+# 测试用户信息
+@testUsername = testuser
+@testPassword = 123456
+@testNickname = 测试用户
+
+
+### ============================================
+### 🏥 健康检查
+### ============================================
+
+### 基础健康检查
+# @name healthCheck
+GET {{baseUrl}}/health
+
+###
+
+### 详细统计信息
+# @name healthStats
+GET {{baseUrl}}/health/stats
+
+
+### ============================================
+### 🏢 租户管理接口（需内部密钥）
+### ============================================
+
+### 注册新租户
+# @name registerTenant
+POST {{baseUrl}}/tenant/register
+Content-Type: {{contentType}}
+X-Internal-Secret: {{internalSecret}}
+
+{
+    "app_id": "myhomepage",
+    "name": "我的主页",
+    "description": "个人主页应用",
+    "allowed_origins": ["http://localhost:3000", "https://example.com"]
+}
+
+###
+
+### 查询所有租户
+# @name listTenants
+GET {{baseUrl}}/tenant/list
+X-Internal-Secret: {{internalSecret}}
+
+###
+
+### 查询租户密钥
+# @name getTenantSecret
+GET {{baseUrl}}/tenant/{{appId}}/secret
+X-Internal-Secret: {{internalSecret}}
+
+###
+
+### 启用租户
+# @name enableTenant
+PUT {{baseUrl}}/tenant/{{appId}}/status
+Content-Type: {{contentType}}
+X-Internal-Secret: {{internalSecret}}
+
+{
+    "status": "active"
+}
+
+###
+
+### 禁用租户
+# @name disableTenant
+PUT {{baseUrl}}/tenant/{{appId}}/status
+Content-Type: {{contentType}}
+X-Internal-Secret: {{internalSecret}}
+
+{
+    "status": "disabled"
+}
+
+###
+
+### 查询租户下用户列表
+# @name listTenantUsers
+GET {{baseUrl}}/tenant/{{appId}}/users?page=1&page_size=20
+X-Internal-Secret: {{internalSecret}}
+
+###
+
+### 设置用户角色（将用户 ID 为 1 的用户设为管理员）
+# @name updateUserRole
+PUT {{baseUrl}}/tenant/{{appId}}/user/1/role
+Content-Type: {{contentType}}
+X-Internal-Secret: {{internalSecret}}
+
+{
+    "role": "admin"
+}
+
+###
+
+### 更新用户扩展数据
+# @name updateUserExtra
+PUT {{baseUrl}}/tenant/{{appId}}/user/1/extra
+Content-Type: {{contentType}}
+X-Internal-Secret: {{internalSecret}}
+
+{
+    "extra_data": {
+        "level": 5,
+        "vip": true,
+        "tags": ["developer", "tester"]
+    }
+}
+
+
+### ============================================
+### 🔐 认证接口（需租户信息）
+### ============================================
+
+### 用户注册
+# @name register
+POST {{baseUrl}}/auth/register
+Content-Type: {{contentType}}
+X-App-Id: {{appId}}
+
+{
+    "username": "{{testUsername}}",
+    "password": "{{testPassword}}",
+    "nickname": "{{testNickname}}"
+}
+
+###
+
+### 用户登录
+# @name login
+POST {{baseUrl}}/auth/login
+Content-Type: {{contentType}}
+X-App-Id: {{appId}}
+
+{
+    "username": "{{testUsername}}",
+    "password": "{{testPassword}}"
+}
+
+###
+
+### 验证 Token（不带租户信息）
+# @name verifyToken
+GET {{baseUrl}}/auth/verify
+Authorization: Bearer {{token}}
+
+###
+
+### 验证 Token（带租户信息，返回角色等附加数据）
+# @name verifyTokenWithTenant
+GET {{baseUrl}}/auth/verify
+Authorization: Bearer {{token}}
+X-App-Id: {{appId}}
+
+###
+
+### 刷新 Token
+# @name refreshToken
+POST {{baseUrl}}/auth/refresh
+Authorization: Bearer {{token}}
+
+###
+
+### 用户登出
+# @name logout
+POST {{baseUrl}}/auth/logout
+Authorization: Bearer {{token}}
+
+
+### ============================================
+### 👤 用户接口（需认证）
+### ============================================
+
+### 获取个人信息（不带租户信息）
+# @name getProfile
+GET {{baseUrl}}/user/profile
+Authorization: Bearer {{token}}
+
+###
+
+### 获取个人信息（带租户信息，返回角色等附加数据）
+# @name getProfileWithTenant
+GET {{baseUrl}}/user/profile
+Authorization: Bearer {{token}}
+X-App-Id: {{appId}}
+
+###
+
+### 更新个人信息 - 修改昵称
+# @name updateNickname
+PUT {{baseUrl}}/user/profile
+Content-Type: {{contentType}}
+Authorization: Bearer {{token}}
+
+{
+    "nickname": "新昵称"
+}
+
+###
+
+### 更新个人信息 - 修改头像
+# @name updateAvatar
+PUT {{baseUrl}}/user/profile
+Content-Type: {{contentType}}
+Authorization: Bearer {{token}}
+
+{
+    "avatar": "🦄"
+}
+
+###
+
+### 更新个人信息 - 修改邮箱和手机
+# @name updateContact
+PUT {{baseUrl}}/user/profile
+Content-Type: {{contentType}}
+Authorization: Bearer {{token}}
+
+{
+    "email": "test@example.com",
+    "phone": "13800138000"
+}
+
+###
+
+### 更新个人信息 - 批量修改
+# @name updateProfileAll
+PUT {{baseUrl}}/user/profile
+Content-Type: {{contentType}}
+Authorization: Bearer {{token}}
+
+{
+    "nickname": "全新昵称",
+    "avatar": "🚀",
+    "email": "new@example.com",
+    "phone": "13900139000"
+}
+
+###
+
+### 修改密码
+# @name changePassword
+PUT {{baseUrl}}/user/password
+Content-Type: {{contentType}}
+Authorization: Bearer {{token}}
+
+{
+    "old_password": "{{testPassword}}",
+    "new_password": "newpassword123"
+}
+
+
+### ============================================
+### 📋 典型使用流程
+### ============================================
+### 1. 先执行 "基础健康检查" 确认服务正常
+### 2. 执行 "注册新租户" 获取 app_id 和 app_secret
+### 3. 将返回的 app_secret 填入上方 @appSecret 变量
+### 4. 执行 "用户注册" 或 "用户登录"
+### 5. 将返回的 token 填入上方 @token 变量
+### 6. 之后即可测试所有需要认证的接口

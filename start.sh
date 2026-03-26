@@ -9,7 +9,8 @@ set -e
 APP_NAME="myusercenter"
 APP_DIR="$(cd "$(dirname "$0")" && pwd)"
 PID_FILE="$APP_DIR/$APP_NAME.pid"
-LOG_FILE="$APP_DIR/$APP_NAME.log"
+LOG_DIR="$APP_DIR/logs"
+LOG_FILE_LATEST="$LOG_DIR/usercenter-$(date +%Y-%m-%d).log"
 
 # 颜色输出
 RED='\033[0;31m'
@@ -49,16 +50,18 @@ start() {
 
     info "正在启动 $APP_NAME ..."
     cd "$APP_DIR"
-    nohup "./$APP_NAME" > "$LOG_FILE" 2>&1 &
+    # 确保日志目录存在
+    mkdir -p "$LOG_DIR"
+    nohup "./$APP_NAME" > /dev/null 2>&1 &
     local pid=$!
     echo "$pid" > "$PID_FILE"
     sleep 1
 
     if kill -0 "$pid" 2>/dev/null; then
         info "$APP_NAME 启动成功 ✅ (PID: $pid)"
-        info "日志文件: $LOG_FILE"
+        info "日志目录: $LOG_DIR"
     else
-        error "$APP_NAME 启动失败，请查看日志: $LOG_FILE"
+        error "$APP_NAME 启动失败，请查看日志: $LOG_DIR"
         rm -f "$PID_FILE"
         return 1
     fi
@@ -121,10 +124,14 @@ status() {
 
 # 查看日志
 logs() {
-    if [ -f "$LOG_FILE" ]; then
-        tail -f "$LOG_FILE"
+    # 找到最新的日志文件
+    local latest
+    latest=$(ls -t "$LOG_DIR"/usercenter-*.log 2>/dev/null | head -1)
+    if [ -n "$latest" ]; then
+        info "正在查看日志: $latest"
+        tail -f "$latest"
     else
-        warn "日志文件不存在: $LOG_FILE"
+        warn "日志目录中没有日志文件: $LOG_DIR"
     fi
 }
 

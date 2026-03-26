@@ -3,7 +3,6 @@ package database
 import (
 	"crypto/rand"
 	"encoding/hex"
-	"fmt"
 	"log"
 	"os"
 	"path/filepath"
@@ -124,6 +123,6 @@ func generateSecret() string {
 func CleanExpiredTokens() {
 	result := DB.Where("expires_at < ?", time.Now()).Delete(&model.TokenBlacklist{})
 	if result.RowsAffected > 0 {
-		fmt.Printf("🧹 已清理 %d 条过期 Token\n", result.RowsAffected)
+		log.Printf("🧹 已清理 %d 条过期 Token", result.RowsAffected)
 	}
 }
