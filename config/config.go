@@ -30,6 +30,9 @@ type Config struct {
 	LogDir        string // 日志目录路径
 	LogFilePrefix string // 日志文件名前缀
 	LogMaxDays    int    // 日志保留天数（0 表示不限制）
+
+	// 雪花算法
+	SnowflakeNodeID int // 雪花算法节点 ID（0~1023）
 }
 
 var C Config
@@ -57,6 +60,8 @@ func Load() {
 		LogDir:        getEnv("LOG_DIR", "./logs"),
 		LogFilePrefix: getEnv("LOG_FILE_PREFIX", "usercenter"),
 		LogMaxDays:    getEnvInt("LOG_MAX_DAYS", 30),
+
+		SnowflakeNodeID: getEnvInt("SNOWFLAKE_NODE_ID", 1),
 	}
 }
 

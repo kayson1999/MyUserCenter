@@ -1,6 +1,11 @@
 package model
 
-import "time"
+import (
+	"time"
+
+	"github.com/kayson1999/MyUserCenter/util"
+	"gorm.io/gorm"
+)
 
 // Tenant 租户（接入的服务）
 type Tenant struct {
@@ -19,7 +24,7 @@ func (Tenant) TableName() string { return "tenants" }
 
 // User 全局用户表
 type User struct {
-	ID           uint      `gorm:"primaryKey;autoIncrement" json:"id"`
+	ID           int64     `gorm:"primaryKey" json:"id,string"`
 	Username     string    `gorm:"uniqueIndex;size:50;not null" json:"username"`
 	PasswordHash string    `gorm:"column:password_hash;size:128;not null" json:"-"`
 	Nickname     string    `gorm:"size:50;not null" json:"nickname"`
@@ -33,11 +38,19 @@ type User struct {
 
 func (User) TableName() string { return "users" }
 
+// BeforeCreate 创建前自动生成雪花算法 ID
+func (u *User) BeforeCreate(tx *gorm.DB) error {
+	if u.ID == 0 {
+		u.ID = util.GenerateID()
+	}
+	return nil
+}
+
 // TenantUser 租户-用户关联表
 type TenantUser struct {
 	ID        uint      `gorm:"primaryKey;autoIncrement" json:"id"`
 	TenantID  uint      `gorm:"column:tenant_id;not null;uniqueIndex:idx_tenant_user" json:"tenant_id"`
-	UserID    uint      `gorm:"column:user_id;not null;uniqueIndex:idx_tenant_user" json:"user_id"`
+	UserID    int64     `gorm:"column:user_id;not null;uniqueIndex:idx_tenant_user" json:"user_id,string"`
 	Role      string    `gorm:"size:20;default:user" json:"role"`
 	ExtraData string    `gorm:"column:extra_data;type:text;default:'{}'" json:"extra_data"`
 	Status    string    `gorm:"size:20;default:active" json:"status"`
@@ -54,7 +67,7 @@ func (TenantUser) TableName() string { return "tenant_users" }
 type TokenBlacklist struct {
 	ID        uint      `gorm:"primaryKey;autoIncrement" json:"id"`
 	TokenHash string    `gorm:"column:token_hash;uniqueIndex;size:64;not null" json:"token_hash"`
-	UserID    uint      `gorm:"column:user_id;not null" json:"user_id"`
+	UserID    int64     `gorm:"column:user_id;not null" json:"user_id,string"`
 	ExpiresAt time.Time `gorm:"column:expires_at;not null;index" json:"expires_at"`
 	CreatedAt time.Time `gorm:"autoCreateTime" json:"created_at"`
 }
@@ -64,7 +77,7 @@ func (TokenBlacklist) TableName() string { return "token_blacklist" }
 // LoginLog 登录日志
 type LoginLog struct {
 	ID        uint      `gorm:"primaryKey;autoIncrement" json:"id"`
-	UserID    uint      `gorm:"column:user_id;not null;index:idx_login_logs_user" json:"user_id"`
+	UserID    int64     `gorm:"column:user_id;not null;index:idx_login_logs_user" json:"user_id,string"`
 	TenantID  *uint     `gorm:"column:tenant_id;index:idx_login_logs_tenant" json:"tenant_id"`
 	Action    string    `gorm:"size:20;not null" json:"action"`
 	IP        string    `gorm:"size:100;default:''" json:"ip"`
@@ -78,7 +91,7 @@ func (LoginLog) TableName() string { return "login_logs" }
 
 // UserResponse 用户信息响应（不含密码）
 type UserResponse struct {
-	ID        uint      `json:"id"`
+	ID        int64     `json:"id,string"`
 	Username  string    `json:"username"`
 	Nickname  string    `json:"nickname"`
 	Avatar    string    `json:"avatar"`

@@ -10,6 +10,7 @@ import (
 	"github.com/kayson1999/MyUserCenter/handler"
 	"github.com/kayson1999/MyUserCenter/logger"
 	"github.com/kayson1999/MyUserCenter/middleware"
+	"github.com/kayson1999/MyUserCenter/util"
 
 	"github.com/gin-gonic/gin"
 )
@@ -21,6 +22,9 @@ func main() {
 	// 初始化日志系统
 	logger.Init()
 	defer logger.Close()
+
+	// 初始化雪花算法 ID 生成器（节点 ID 通过配置指定）
+	util.InitSnowflake(int64(config.C.SnowflakeNodeID))
 
 	// 初始化数据库
 	database.Init()

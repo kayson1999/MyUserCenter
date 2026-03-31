@@ -8,7 +8,7 @@
 @contentType = application/json
 
 # 租户信息（注册租户后替换为实际值）
-@appId = myhomepage
+@appId = worker
 @appSecret = your_app_secret_here
 
 # 内部通信密钥（与 .env 中 INTERNAL_SECRET 保持一致）
@@ -50,9 +50,9 @@ X-Internal-Secret: {{internalSecret}}
 
 {
     "app_id": "myhomepage",
-    "name": "我的主页",
-    "description": "个人主页应用",
-    "allowed_origins": ["http://localhost:3000", "https://example.com"]
+    "name": "个人主页",
+    "description": "个人主页站点",
+    "allowed_origins": ["http://localhost:3000"]
 }
 
 ###
@@ -64,10 +64,11 @@ X-Internal-Secret: {{internalSecret}}
 
 ###
 
-### 查询租户密钥
+### 查询租户密钥（按 appId 变量查询）
 # @name getTenantSecret
 GET {{baseUrl}}/tenant/{{appId}}/secret
 X-Internal-Secret: {{internalSecret}}
+
 
 ###
 

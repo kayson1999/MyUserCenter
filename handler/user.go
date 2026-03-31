@@ -3,6 +3,7 @@ package handler
 import (
 	"net/http"
 	"regexp"
+	"strconv"
 
 	"github.com/kayson1999/MyUserCenter/database"
 	"github.com/kayson1999/MyUserCenter/middleware"
@@ -28,7 +29,7 @@ func GetProfile(c *gin.Context) {
 	}
 
 	result := gin.H{
-		"id":         user.ID,
+		"id":         strconv.FormatInt(user.ID, 10),
 		"username":   user.Username,
 		"nickname":   user.Nickname,
 		"avatar":     user.Avatar,

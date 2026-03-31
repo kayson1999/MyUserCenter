@@ -1,9 +1,11 @@
 package middleware
 
 import (
+	"bytes"
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/hex"
+	"io"
 	"math"
 	"net/http"
 	"strconv"
@@ -93,8 +95,8 @@ func RequireTenant() gin.HandlerFunc {
 				return
 			}
 
-			// 重新设置 body 以便后续读取
-			c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, 1<<20)
+			// 恢复 body 以便后续 handler 读取
+			c.Request.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
 		}
 
 		c.Set("tenant", &tenant)

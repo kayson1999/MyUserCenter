@@ -10,14 +10,14 @@ import (
 
 // Claims 自定义 JWT Claims
 type Claims struct {
-	UserID   uint   `json:"userId"`
+	UserID   int64  `json:"userId"`
 	Username string `json:"username"`
 	TenantID uint   `json:"tenantId"`
 	jwt.RegisteredClaims
 }
 
 // SignToken 签发 Token
-func SignToken(userID uint, username string, tenantID uint) (string, error) {
+func SignToken(userID int64, username string, tenantID uint) (string, error) {
 	claims := Claims{
 		UserID:   userID,
 		Username: username,

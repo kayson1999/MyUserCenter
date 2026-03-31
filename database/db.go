@@ -1,8 +1,6 @@
 package database
 
 import (
-	"crypto/rand"
-	"encoding/hex"
 	"log"
 	"os"
 	"path/filepath"
@@ -78,45 +76,7 @@ func Init() {
 		log.Fatalf("❌ 数据库建表失败: %v", err)
 	}
 
-	// 种子数据
-	seedTenants()
-
 	log.Println("✅ 数据库初始化完成")
-}
-
-// seedTenants 初始化种子租户
-func seedTenants() {
-	tenants := []model.Tenant{
-		{
-			AppID:          "myhomepage",
-			AppSecret:      generateSecret(),
-			Name:           "MyHomePage",
-			Description:    "个人主页 — 打工人打卡等服务",
-			AllowedOrigins: `["http://localhost:3000","http://localhost:3001"]`,
-		},
-		{
-			AppID:          "decisioner",
-			AppSecret:      generateSecret(),
-			Name:           "冲动是魔鬼",
-			Description:    "决策分析助手",
-			AllowedOrigins: `["http://localhost:9090"]`,
-		},
-	}
-
-	for _, t := range tenants {
-		// 仅在不存在时插入
-		var count int64
-		DB.Model(&model.Tenant{}).Where("app_id = ?", t.AppID).Count(&count)
-		if count == 0 {
-			DB.Create(&t)
-		}
-	}
-}
-
-func generateSecret() string {
-	b := make([]byte, 32)
-	_, _ = rand.Read(b)
-	return hex.EncodeToString(b)
 }
 
 // CleanExpiredTokens 清理过期的 Token 黑名单

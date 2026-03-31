@@ -169,7 +169,7 @@ func UpdateTenantStatus(c *gin.Context) {
 func UpdateUserRole(c *gin.Context) {
 	appID := c.Param("appId")
 	userIDStr := c.Param("userId")
-	userID, err := strconv.ParseUint(userIDStr, 10, 64)
+	userID, err := strconv.ParseInt(userIDStr, 10, 64)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "无效的用户 ID"})
 		return
@@ -196,7 +196,7 @@ func UpdateUserRole(c *gin.Context) {
 	}
 
 	result := db.Model(&model.TenantUser{}).
-		Where("tenant_id = ? AND user_id = ?", tenant.ID, uint(userID)).
+		Where("tenant_id = ? AND user_id = ?", tenant.ID, userID).
 		Update("role", req.Role)
 	if result.RowsAffected == 0 {
 		c.JSON(http.StatusNotFound, gin.H{"error": "用户未关联该租户"})
@@ -211,7 +211,7 @@ func UpdateUserRole(c *gin.Context) {
 func UpdateUserExtra(c *gin.Context) {
 	appID := c.Param("appId")
 	userIDStr := c.Param("userId")
-	userID, err := strconv.ParseUint(userIDStr, 10, 64)
+	userID, err := strconv.ParseInt(userIDStr, 10, 64)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "无效的用户 ID"})
 		return
@@ -244,7 +244,7 @@ func UpdateUserExtra(c *gin.Context) {
 	}
 
 	result := db.Model(&model.TenantUser{}).
-		Where("tenant_id = ? AND user_id = ?", tenant.ID, uint(userID)).
+		Where("tenant_id = ? AND user_id = ?", tenant.ID, userID).
 		Update("extra_data", string(extraJSON))
 	if result.RowsAffected == 0 {
 		c.JSON(http.StatusNotFound, gin.H{"error": "用户未关联该租户"})
@@ -283,7 +283,7 @@ func ListTenantUsers(c *gin.Context) {
 	db.Model(&model.TenantUser{}).Where("tenant_id = ?", tenant.ID).Count(&total)
 
 	type UserItem struct {
-		ID           uint   `json:"id"`
+		ID           int64  `json:"id"`
 		Username     string `json:"username"`
 		Nickname     string `json:"nickname"`
 		Avatar       string `json:"avatar"`
@@ -307,7 +307,7 @@ func ListTenantUsers(c *gin.Context) {
 	var result []gin.H
 	for _, u := range users {
 		result = append(result, gin.H{
-			"id":            u.ID,
+			"id":            strconv.FormatInt(u.ID, 10),
 			"username":      u.Username,
 			"nickname":      u.Nickname,
 			"avatar":        u.Avatar,

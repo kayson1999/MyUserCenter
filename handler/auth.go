@@ -7,6 +7,7 @@ import (
 	"math/rand"
 	"net/http"
 	"regexp"
+	"strconv"
 	"time"
 
 	"github.com/kayson1999/MyUserCenter/database"
@@ -92,12 +93,12 @@ func Register(c *gin.Context) {
 	}
 
 	// 建立租户关联
-	tenantUser := model.TenantUser{
+	tu := model.TenantUser{
 		TenantID: tenant.ID,
 		UserID:   user.ID,
 		Role:     "user",
 	}
-	db.Where("tenant_id = ? AND user_id = ?", tenant.ID, user.ID).FirstOrCreate(&tenantUser)
+	db.Where("tenant_id = ? AND user_id = ?", tenant.ID, user.ID).FirstOrCreate(&tu)
 
 	// 签发 Token
 	token, err := util.SignToken(user.ID, user.Username, tenant.ID)
@@ -109,15 +110,11 @@ func Register(c *gin.Context) {
 	// 记录日志
 	logAction(db, user.ID, &tenant.ID, "register", c)
 
-	// 获取租户用户信息
-	var tu model.TenantUser
-	db.Where("tenant_id = ? AND user_id = ?", tenant.ID, user.ID).First(&tu)
-
 	resp := user.ToResponse()
 	c.JSON(http.StatusOK, gin.H{
 		"token": token,
 		"user": gin.H{
-			"id":         resp.ID,
+			"id":         strconv.FormatInt(resp.ID, 10),
 			"username":   resp.Username,
 			"nickname":   resp.Nickname,
 			"avatar":     resp.Avatar,
@@ -171,16 +168,12 @@ func Login(c *gin.Context) {
 	}
 
 	// 自动建立租户关联
-	tenantUser := model.TenantUser{
+	tu := model.TenantUser{
 		TenantID: tenant.ID,
 		UserID:   user.ID,
 		Role:     "user",
 	}
-	db.Where("tenant_id = ? AND user_id = ?", tenant.ID, user.ID).FirstOrCreate(&tenantUser)
-
-	// 检查用户在该租户下的状态
-	var tu model.TenantUser
-	db.Where("tenant_id = ? AND user_id = ?", tenant.ID, user.ID).First(&tu)
+	db.Where("tenant_id = ? AND user_id = ?", tenant.ID, user.ID).FirstOrCreate(&tu)
 	if tu.Status != "active" {
 		c.JSON(http.StatusForbidden, gin.H{"error": "您在该服务中的账号已被禁用"})
 		return
@@ -200,7 +193,7 @@ func Login(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"token": token,
 		"user": gin.H{
-			"id":         resp.ID,
+			"id":         strconv.FormatInt(resp.ID, 10),
 			"username":   resp.Username,
 			"nickname":   resp.Nickname,
 			"avatar":     resp.Avatar,
@@ -215,7 +208,7 @@ func Login(c *gin.Context) {
 	})
 }
 
-// Verify 验证 Token 并返回用户信息
+// Verify 验证 Token
 // GET /auth/verify
 func Verify(c *gin.Context) {
 	claims := middleware.GetUser(c)
@@ -234,7 +227,7 @@ func Verify(c *gin.Context) {
 	}
 
 	result := gin.H{
-		"id":         user.ID,
+		"id":         strconv.FormatInt(user.ID, 10),
 		"username":   user.Username,
 		"nickname":   user.Nickname,
 		"avatar":     user.Avatar,
@@ -327,7 +320,7 @@ func Refresh(c *gin.Context) {
 
 // ── 工具函数 ──
 
-func logAction(db *gorm.DB, userID uint, tenantID *uint, action string, c *gin.Context) {
+func logAction(db *gorm.DB, userID int64, tenantID *uint, action string, c *gin.Context) {
 	ip := c.ClientIP()
 	ua := c.GetHeader("User-Agent")
 	if len(ua) > 200 {

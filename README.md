@@ -6,9 +6,12 @@
 
 - 🏢 **多租户架构** — 一套用户体系，多个应用共享，每个租户独立管理用户角色和扩展数据
 - 🔐 **JWT 认证** — 基于 JWT 的无状态认证，支持 Token 刷新和黑名单机制
+- ❄️ **雪花算法 ID** — 用户 ID 采用 Snowflake 算法生成，分布式唯一、趋势递增，前端以字符串形式返回避免精度丢失
 - 🗄️ **双数据库支持** — 通过环境变量一键切换 MySQL / SQLite
-- 🛡️ **安全防护** — 内置请求限流、CORS 跨域、密码 bcrypt 加密
-- 📝 **登录日志** — 自动记录用户登录/登出/注册行为
+- 🛡️ **安全防护** — 内置请求限流、CORS 跨域、密码 bcrypt 加密、HMAC 签名验证
+- 📝 **请求/响应日志** — 中间件自动记录各接口的输入（请求头、请求体）和输出（状态码、响应体），敏感信息自动脱敏
+- 📋 **登录日志** — 自动记录用户登录/登出/注册行为
+- 📂 **日志滚动** — 日志按天自动滚动，支持配置保留天数，自动清理过期日志
 - 🧹 **自动清理** — 定时清理过期 Token 黑名单
 
 ## 🛠️ 技术栈
@@ -21,6 +24,7 @@
 | 数据库 | MySQL / SQLite |
 | 认证 | JWT (golang-jwt) |
 | 密码加密 | bcrypt |
+| ID 生成 | Snowflake 雪花算法 |
 
 ## 📁 项目结构
 
@@ -28,6 +32,7 @@
 MyUserCenter/
 ├── main.go              # 程序入口，路由注册
 ├── start.sh             # 启动/停止/重启脚本
+├── api.http             # API 测试文件（VS Code REST Client）
 ├── Dockerfile           # Docker 镜像构建（多阶段）
 ├── docker-compose.yml   # Docker Compose 编排部署
 ├── .env                 # 环境变量配置（需自行创建）
@@ -36,23 +41,27 @@ MyUserCenter/
 ├── .gitignore           # Git 忽略规则
 ├── go.mod               # Go 模块依赖
 ├── config/
-│   └── config.go        # 配置加载
+│   └── config.go        # 配置加载（环境变量）
 ├── database/
 │   └── db.go            # 数据库初始化（MySQL/SQLite）
 ├── model/
 │   └── model.go         # 数据模型定义
 ├── handler/
-│   ├── auth.go          # 认证接口（注册/登录/登出/刷新）
+│   ├── auth.go          # 认证接口（注册/登录/登出/刷新/验证）
 │   ├── user.go          # 用户接口（个人信息/修改密码）
 │   ├── tenant.go        # 租户管理接口
 │   └── health.go        # 健康检查接口
 ├── middleware/
-│   ├── auth.go          # JWT 认证 & 租户校验中间件
+│   ├── auth.go          # JWT 认证 & 租户 HMAC 签名校验中间件
 │   ├── cors.go          # CORS 跨域中间件
-│   ├── logger.go        # 请求日志中间件
+│   ├── logger.go        # 请求/响应日志中间件（记录输入输出）
 │   └── ratelimit.go     # 请求限流中间件
+├── logger/
+│   └── logger.go        # 日志系统（按天滚动、自动清理）
 ├── util/
-│   └── token.go         # JWT 工具函数
+│   ├── token.go         # JWT 签发/验证工具
+│   └── snowflake.go     # 雪花算法 ID 生成器
+├── logs/                # 日志文件目录（自动创建）
 └── data/                # SQLite 数据库文件目录
 ```
 
@@ -96,6 +105,15 @@ DB_NAME=usercenter
 
 # SQLite 配置（DB_TYPE=sqlite 时生效）
 DB_PATH=./data/usercenter.db
+
+# 日志配置
+LOG_TO_FILE=true
+LOG_DIR=./logs
+LOG_FILE_PREFIX=usercenter
+LOG_MAX_DAYS=30
+
+# 雪花算法节点 ID（0~1023，多实例部署时每个实例设置不同值）
+SNOWFLAKE_NODE_ID=1
 ```
 
 ### 3. 启动服务
@@ -225,32 +243,35 @@ docker compose build --no-cache
 
 ### 请求头说明
 
-| Header | 说明 | 示例 |
-|--------|------|------|
-| `Authorization` | JWT Token | `Bearer <token>` |
-| `X-App-ID` | 租户应用 ID | `myhomepage` |
-| `X-App-Secret` | 租户密钥 | `abc123...` |
-| `X-Internal-Secret` | 内部通信密钥 | `internal_shared_secret_mamba_2026` |
+| Header | 说明 | 必须 | 示例 |
+|--------|------|------|------|
+| `Authorization` | JWT Token（Bearer 格式） | 认证接口必须 | `Bearer <token>` |
+| `X-App-Id` | 租户应用 ID | 租户接口必须 | `worker` |
+| `X-App-Sign` | HMAC-SHA256 签名（可选，提供则验证） | 可选 | `a1b2c3...` |
+| `X-Timestamp` | 请求时间戳（秒），与签名配合使用，5 分钟内有效 | 签名时必须 | `1711526400` |
+| `X-Internal-Secret` | 内部通信密钥（租户管理接口） | 管理接口必须 | `your_internal_secret` |
+
+> **签名算法**：`HMAC-SHA256(app_secret, timestamp + app_id + request_body)`
+>
+> 签名验证为可选项，仅在同时提供 `X-App-Sign` 和 `X-Timestamp` 时触发。不提供签名时，仅验证 `X-App-Id` 对应的租户是否存在且启用。
 
 ### 请求示例
 
-**注册：**
+**注册用户：**
 
 ```bash
 curl -X POST http://localhost:4000/auth/register \
   -H "Content-Type: application/json" \
-  -H "X-App-ID: myhomepage" \
-  -H "X-App-Secret: <your_app_secret>" \
+  -H "X-App-Id: worker" \
   -d '{"username": "testuser", "password": "123456", "nickname": "测试用户"}'
 ```
 
-**登录：**
+**用户登录：**
 
 ```bash
 curl -X POST http://localhost:4000/auth/login \
   -H "Content-Type: application/json" \
-  -H "X-App-ID: myhomepage" \
-  -H "X-App-Secret: <your_app_secret>" \
+  -H "X-App-Id: worker" \
   -d '{"username": "testuser", "password": "123456"}'
 ```
 
@@ -261,13 +282,54 @@ curl http://localhost:4000/user/profile \
   -H "Authorization: Bearer <token>"
 ```
 
+**注册新租户（内部接口）：**
+
+```bash
+curl -X POST http://localhost:4000/tenant/register \
+  -H "Content-Type: application/json" \
+  -H "X-Internal-Secret: your_internal_secret" \
+  -d '{"app_id": "myapp", "name": "我的应用", "description": "应用描述", "allowed_origins": ["http://localhost:3000"]}'
+```
+
 ## 📋 数据模型
 
 - **Tenant（租户）** — 接入的应用服务，包含 app_id、app_secret、允许的跨域源
-- **User（用户）** — 全局用户，包含用户名、密码哈希、昵称、头像等
+- **User（用户）** — 全局用户，ID 为雪花算法生成的 `int64`（JSON 中以字符串形式返回），包含用户名、密码哈希、昵称、头像等
 - **TenantUser（租户用户关联）** — 用户在各租户下的角色、状态、扩展数据
 - **TokenBlacklist（Token 黑名单）** — 已登出/已刷新的 Token 记录
 - **LoginLog（登录日志）** — 用户行为日志（注册/登录/登出）
+
+> **关于用户 ID**：用户 ID 采用雪花算法生成（如 `"162911976203227136"`），在 JSON 响应中以**字符串**形式返回，避免 JavaScript `Number.MAX_SAFE_INTEGER`（2^53 - 1）精度丢失问题。
+
+## 📊 日志系统
+
+### 日志文件
+
+- 日志按天自动滚动，文件名格式：`{prefix}-{date}.log`（如 `usercenter-2026-03-27.log`）
+- 同时输出到控制台和文件
+- 支持配置保留天数，自动清理过期日志
+
+### 请求/响应日志
+
+每次接口调用自动记录输入输出，格式示例：
+
+```
+────────────────────────────────────────
+  ▶ 请求: POST /auth/login
+  ▶ 来源IP: 127.0.0.1
+  ▶ 请求头: X-App-Id=worker; Content-Type=application/json; Authorization=***
+  ▶ 请求体: {"username":"testuser","password":"123456"}
+  ◀ 状态码: 200 ✅
+  ◀ 响应体: {"token":"eyJhbGciOi...","user":{...}}
+  ⏱ 耗时: 12.345ms
+────────────────────────────────────────
+```
+
+**特性：**
+- 敏感请求头自动脱敏（`Authorization`、`X-Internal-Secret`、`X-App-Sign` 显示为 `***`）
+- 请求体/响应体超过 4KB 自动截断
+- 仅记录 `application/json`、`application/x-www-form-urlencoded`、`text/plain` 类型的请求体
+- 健康检查接口（`/health`、`/health/stats`）不记录日志
 
 ## 📄 License
 
