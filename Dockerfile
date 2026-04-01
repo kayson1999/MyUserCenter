@@ -4,6 +4,9 @@
 # ============================================
 FROM golang:1.21-bullseye AS builder
 
+# 设置 Go 模块代理为国内镜像，加速依赖下载
+ENV GOPROXY=https://goproxy.cn,direct
+
 WORKDIR /build
 
 # 先复制依赖文件，利用 Docker 缓存层
@@ -19,9 +22,13 @@ RUN CGO_ENABLED=1 GOOS=linux go build -o myusercenter .
 # ============================================
 FROM debian:bullseye-slim
 
-# 安装运行时依赖（SQLite 需要 libc）
+# 替换为阿里云镜像源，加速 apt-get
+RUN sed -i 's|deb.debian.org|mirrors.aliyun.com|g' /etc/apt/sources.list && \
+    sed -i 's|security.debian.org|mirrors.aliyun.com|g' /etc/apt/sources.list
+
+# 安装运行时依赖（SQLite 需要 libc，curl 用于健康检查）
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends ca-certificates && \
+    apt-get install -y --no-install-recommends ca-certificates curl && \
     rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
