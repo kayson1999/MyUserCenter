@@ -33,6 +33,15 @@ type Config struct {
 
 	// 雪花算法
 	SnowflakeNodeID int // 雪花算法节点 ID（0~1023）
+
+	// 限流
+	APIRateLimit  int // 通用 API 限流：时间窗口内最大请求数（默认 100）
+	APIRateWindow int // 通用 API 限流：时间窗口，单位秒（默认 60）
+	APIRateBurst  int // 通用 API 限流：突发上限（默认 10）
+
+	AuthRateLimit  int // 认证接口限流：时间窗口内最大请求数（默认 20）
+	AuthRateWindow int // 认证接口限流：时间窗口，单位秒（默认 900，即 15 分钟）
+	AuthRateBurst  int // 认证接口限流：突发上限（默认 5）
 }
 
 var C Config
@@ -62,6 +71,14 @@ func Load() {
 		LogMaxDays:    getEnvInt("LOG_MAX_DAYS", 30),
 
 		SnowflakeNodeID: getEnvInt("SNOWFLAKE_NODE_ID", 1),
+
+		APIRateLimit:  getEnvInt("API_RATE_LIMIT", 100),
+		APIRateWindow: getEnvInt("API_RATE_WINDOW", 60),
+		APIRateBurst:  getEnvInt("API_RATE_BURST", 10),
+
+		AuthRateLimit:  getEnvInt("AUTH_RATE_LIMIT", 20),
+		AuthRateWindow: getEnvInt("AUTH_RATE_WINDOW", 900),
+		AuthRateBurst:  getEnvInt("AUTH_RATE_BURST", 5),
 	}
 }
 

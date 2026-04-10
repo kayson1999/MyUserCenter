@@ -5,6 +5,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/kayson1999/MyUserCenter/config"
+
 	"github.com/gin-gonic/gin"
 	"golang.org/x/time/rate"
 )
@@ -63,9 +65,10 @@ func (l *ipLimiter) cleanup() {
 	}
 }
 
-// APILimiter 通用 API 限流：每秒约 1.67 次（每分钟 100 次），突发 10
+// APILimiter 通用 API 限流，频率参数通过环境变量配置
 func APILimiter() gin.HandlerFunc {
-	limiter := newIPLimiter(rate.Limit(100.0/60.0), 10)
+	r := rate.Limit(float64(config.C.APIRateLimit) / float64(config.C.APIRateWindow))
+	limiter := newIPLimiter(r, config.C.APIRateBurst)
 	return func(c *gin.Context) {
 		ip := c.ClientIP()
 		if !limiter.getLimiter(ip).Allow() {
@@ -76,13 +79,14 @@ func APILimiter() gin.HandlerFunc {
 	}
 }
 
-// AuthLimiter 认证接口限流：每 15 分钟 20 次 → 约每秒 0.022 次，突发 5
+// AuthLimiter 认证接口限流，频率参数通过环境变量配置
 func AuthLimiter() gin.HandlerFunc {
-	limiter := newIPLimiter(rate.Limit(20.0/900.0), 5)
+	r := rate.Limit(float64(config.C.AuthRateLimit) / float64(config.C.AuthRateWindow))
+	limiter := newIPLimiter(r, config.C.AuthRateBurst)
 	return func(c *gin.Context) {
 		ip := c.ClientIP()
 		if !limiter.getLimiter(ip).Allow() {
-			c.AbortWithStatusJSON(http.StatusTooManyRequests, gin.H{"error": "请求过于频繁，请 15 分钟后再试"})
+			c.AbortWithStatusJSON(http.StatusTooManyRequests, gin.H{"error": "请求过于频繁，请稍后再试"})
 			return
 		}
 		c.Next()
