@@ -9,6 +9,14 @@ import (
 	"github.com/joho/godotenv"
 )
 
+// SeedTenant 预注册租户配置
+// 格式: app_id:name:app_secret
+type SeedTenant struct {
+	AppID     string
+	Name      string
+	AppSecret string
+}
+
 // Config 全局配置
 type Config struct {
 	Port           int
@@ -33,6 +41,9 @@ type Config struct {
 
 	// 雪花算法
 	SnowflakeNodeID int // 雪花算法节点 ID（0~1023）
+
+	// 预注册租户
+	SeedTenants []SeedTenant // 启动时自动注册的租户列表
 
 	// 限流
 	APIRateLimit  int // 通用 API 限流：时间窗口内最大请求数（默认 100）
@@ -79,6 +90,8 @@ func Load() {
 		AuthRateLimit:  getEnvInt("AUTH_RATE_LIMIT", 20),
 		AuthRateWindow: getEnvInt("AUTH_RATE_WINDOW", 900),
 		AuthRateBurst:  getEnvInt("AUTH_RATE_BURST", 5),
+
+		SeedTenants: parseSeedTenants(getEnv("SEED_TENANTS", "")),
 	}
 }
 
@@ -134,4 +147,27 @@ func parseDuration(s string) time.Duration {
 		return 7 * 24 * time.Hour // 默认 7 天
 	}
 	return d
+}
+
+// parseSeedTenants 解析预注册租户配置
+// 环境变量格式: "app_id:name:app_secret,app_id2:name2:app_secret2"
+// 每个租户用逗号分隔，每个租户的字段用冒号分隔
+func parseSeedTenants(raw string) []SeedTenant {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return nil
+	}
+	var tenants []SeedTenant
+	for _, item := range strings.Split(raw, ",") {
+		item = strings.TrimSpace(item)
+		parts := strings.SplitN(item, ":", 3)
+		if len(parts) == 3 && parts[0] != "" && parts[1] != "" && parts[2] != "" {
+			tenants = append(tenants, SeedTenant{
+				AppID:     parts[0],
+				Name:      parts[1],
+				AppSecret: parts[2],
+			})
+		}
+	}
+	return tenants
 }
